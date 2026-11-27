@@ -11,7 +11,7 @@
 // produce identical bytes. Nothing here reads the environment except the
 // output-directory override the kit documents, and nothing writes outside it.
 
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-game.ts';
@@ -28,10 +28,24 @@ function copyTree(from, to) {
   cpSync(from, to, { recursive: true });
 }
 
+// Remove every entry inside `dir` without removing `dir` itself, so a
+// bind-mounted output directory (the grader mounts an empty dir at /output)
+// stays valid. Children are removed recursively, so nested directories go too.
+function emptyDirContents(dir) {
+  mkdirSync(dir, { recursive: true });
+  for (const child of readdirSync(dir)) {
+    rmSync(join(dir, child), { recursive: true, force: true });
+  }
+}
+
 // Start from a clean output directory so a stale file can never leak into the
 // entry: the grader compares the two runs byte for byte.
-rmSync(outputDir, { recursive: true, force: true });
-mkdirSync(outputDir, { recursive: true });
+//
+// NOTE: never remove the output directory itself. The grader bind-mounts an
+// empty directory at /output, and deleting a mount point fails with EBUSY
+// (force only suppresses ENOENT), aborting the run with exit code 1.
+// Empty the directory's contents instead and leave the directory in place.
+emptyDirContents(outputDir);
 
 copyTree(gameDir, join(outputDir, 'game'));
 copyTree(shotsDir, join(outputDir, 'screenshots'));
