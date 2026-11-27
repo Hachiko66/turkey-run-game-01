@@ -1,0 +1,29 @@
+/* Gobble Dash — page chrome around the canvas. The game itself draws everything. */
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #2b1a12;
+  font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  touch-action: none;
+  cursor: pointer;
+  background: #f6b73c;
+}
+
+/* Read aloud, never shown: the status line screen readers announce. */
+#status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
