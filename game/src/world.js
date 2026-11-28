@@ -12,6 +12,8 @@ import {
   drawTree,
   drawHaystack,
   drawCornCob,
+  drawGoldenCorn,
+  drawRollingPumpkin,
   drawOven,
   drawCarvingKnife,
   drawJumpFence,
@@ -49,11 +51,15 @@ export function createWorld() {
     stageIndex: 0,
     obstacles: [],
     corns: [],
+    goldens: [],
+    goldenTimer: 8,
     spawnTimer: 0.9,
     gateX: null,
     shake: 0,
     flash: 0,
     time: 0,
+    stageBanner: null,
+    stageBannerTimer: 0,
   };
 }
 
@@ -70,27 +76,37 @@ function randomSpawnGap(world) {
 function spawnObstacle(world, x) {
   const stage = world.stageIndex;
   const roll = Math.random();
+  const knife = (kx, warnOffset) => ({ kind: 'knife', x: kx, y: -40, vy: 0, state: 'falling', warned: warnOffset || 0 });
   if (stage === 0) {
+    // The farmyard stays gentle: no rolling pumpkins yet, so the run opens fair.
     if (roll < 0.42) world.obstacles.push({ kind: 'fence', x, w: 90, h: 58 });
     else if (roll < 0.68) world.obstacles.push({ kind: 'haystack', x, w: 110, h: 84, used: false });
-    else if (roll < 0.86) world.obstacles.push({ kind: 'knife', x, y: -40, vy: 0, state: 'falling', warned: 0 });
+    else if (roll < 0.86) world.obstacles.push(knife(x));
     else world.obstacles.push({ kind: 'oven', x, w: 140, h: 118 });
   } else if (stage === 1) {
-    if (roll < 0.34) world.obstacles.push({ kind: 'fence', x, w: 90, h: 58 });
-    else if (roll < 0.56) world.obstacles.push({ kind: 'oven', x, w: 140, h: 118 });
-    else if (roll < 0.8) world.obstacles.push({ kind: 'knife', x, y: -40, vy: 0, state: 'falling', warned: 0 });
+    // The barn: pumpkins start rolling in, closing the distance fast.
+    if (roll < 0.30) world.obstacles.push({ kind: 'fence', x, w: 90, h: 58 });
+    else if (roll < 0.50) world.obstacles.push({ kind: 'oven', x, w: 140, h: 118 });
+    else if (roll < 0.72) world.obstacles.push(knife(x));
+    else if (roll < 0.86) world.obstacles.push({ kind: 'pumpkin', x, w: 70, h: 62, vx: 130, roll: 0 });
     else world.obstacles.push({ kind: 'haystack', x, w: 110, h: 84, used: false });
   } else {
-    if (roll < 0.4) world.obstacles.push({ kind: 'oven', x, w: 140, h: 118 });
-    else if (roll < 0.74) world.obstacles.push({ kind: 'knife', x, y: -40, vy: 0, state: 'falling', warned: 0 });
-    else if (roll < 0.9) world.obstacles.push({ kind: 'fence', x, w: 90, h: 58 });
+    // The kitchen: pumpkins roll more often, and knives sometimes drop in
+    // staggered pairs — jumping blindly into a drop is punished.
+    if (roll < 0.36) world.obstacles.push({ kind: 'oven', x, w: 140, h: 118 });
+    else if (roll < 0.62) {
+      world.obstacles.push(knife(x));
+      if (Math.random() < 0.3) world.obstacles.push(knife(x + 150, -0.25));
+    } else if (roll < 0.80) world.obstacles.push({ kind: 'pumpkin', x, w: 70, h: 62, vx: 150, roll: 0 });
+    else if (roll < 0.92) world.obstacles.push({ kind: 'fence', x, w: 90, h: 58 });
     else world.obstacles.push({ kind: 'haystack', x, w: 110, h: 84, used: false });
   }
-  // Corn often trails an obstacle: the brave get paid.
+  // Corn often trails an obstacle: the brave get paid. The low cobs sit low
+  // enough to grab on the run; the high ones take a hop.
   if (Math.random() < 0.75) {
     const n = 2 + Math.floor(Math.random() * 3);
     for (let i = 0; i < n; i++) {
-      world.corns.push({ x: x + 90 + i * 46, y: WORLD.groundY - 90 - (i % 2) * 40, taken: false });
+      world.corns.push({ x: x + 90 + i * 46, y: WORLD.groundY - 70 - (i % 2) * 40, taken: false });
     }
   }
 }
@@ -105,6 +121,18 @@ export function updateWorld(world, dt, dashing) {
 
   if (world.shake > 0) world.shake = Math.max(0, world.shake - dt * 3);
   if (world.flash > 0) world.flash = Math.max(0, world.flash - dt * 2.5);
+  if (world.stageBannerTimer > 0) world.stageBannerTimer = Math.max(0, world.stageBannerTimer - dt);
+
+  // Golden corn: a rare pickup that drifts in every dozen seconds or so.
+  world.goldenTimer -= dt;
+  if (world.goldenTimer <= 0 && world.distance < WORLD.escapeDistance - 100) {
+    world.goldens.push({
+      x: WORLD.width + 140,
+      y: WORLD.groundY - 60 - Math.random() * 60,
+      taken: false,
+    });
+    world.goldenTimer = 13 + Math.random() * 6;
+  }
 
   world.spawnTimer -= dt;
   if (world.spawnTimer <= 0 && world.distance < WORLD.escapeDistance - 60) {
@@ -114,6 +142,11 @@ export function updateWorld(world, dt, dashing) {
 
   for (const ob of world.obstacles) {
     ob.x -= world.speed * dt;
+    if (ob.kind === 'pumpkin') {
+      // Pumpkins roll toward the turkey faster than the world scrolls.
+      ob.x -= ob.vx * dt;
+      ob.roll += dt * 6;
+    }
     if (ob.kind === 'knife') {
       if (ob.state === 'falling') {
         ob.warned += dt;
@@ -135,6 +168,8 @@ export function updateWorld(world, dt, dashing) {
   world.obstacles = world.obstacles.filter((o) => o.x > -220 && o.state !== 'gone');
   for (const c of world.corns) c.x -= world.speed * dt;
   world.corns = world.corns.filter((c) => c.x > -40 && !c.taken);
+  for (const gd of world.goldens) gd.x -= world.speed * dt;
+  world.goldens = world.goldens.filter((gd) => gd.x > -80 && !gd.taken);
 
   // The forest gate appears once the turkey has survived the kitchen.
   if (world.distance >= WORLD.escapeDistance - 40 && world.gateX === null) {
@@ -173,6 +208,11 @@ export function obstaclesHitTurkey(world, bounds, now) {
     } else if (ob.kind === 'knife' && ob.state === 'falling' && ob.y > WORLD.groundY - 320) {
       const box = { x: ob.x - 14, y: ob.y - 130, w: 28, h: 130 };
       if (rectsOverlap(bounds, box)) return ob;
+    } else if (ob.kind === 'pumpkin') {
+      // A rolling pumpkin: low and wide, jump it like a fence — but it
+      // closes the distance faster, so the jump has to come earlier.
+      const box = { x: ob.x - 30, y: WORLD.groundY - 56, w: 60, h: 56 };
+      if (rectsOverlap(bounds, box)) return ob;
     } else if (ob.kind === 'haystack') {
       // Haystacks never hurt: they are shelter, not danger.
       continue;
@@ -196,6 +236,39 @@ export function collectCorn(world, bounds) {
     }
   }
   return got;
+}
+
+export function collectGolden(world, bounds) {
+  // Golden corn: worth 5 corn and a Golden Rush. Its glow is big on purpose.
+  let got = 0;
+  for (const gd of world.goldens) {
+    if (gd.taken) continue;
+    const box = { x: gd.x - 26, y: gd.y - 26, w: 52, h: 52 };
+    if (rectsOverlap(bounds, box)) {
+      gd.taken = true;
+      got++;
+    }
+  }
+  return got;
+}
+
+export function magnetCorn(world, turkey, dt) {
+  // Golden Rush magnet: nearby corn flies toward the turkey, so a rush
+  // turns into a harvest. Only corn within reach is pulled, and it never
+  // overshoots the turkey's beak.
+  const cx = turkey.x;
+  const cy = WORLD.groundY - turkey.y - 29;
+  for (const c of world.corns) {
+    if (c.taken) continue;
+    const dx = cx - c.x;
+    const dy = cy - c.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 240 && dist > 4) {
+      const pull = Math.min(dist, 520 * dt);
+      c.x += (dx / dist) * pull;
+      c.y += (dy / dist) * pull;
+    }
+  }
 }
 
 export function drawWorldBackground(ctx, world) {
@@ -310,9 +383,14 @@ export function drawWorldObjects(ctx, world, turkey) {
   for (const c of world.corns) {
     if (!c.taken) drawCornCob(ctx, c.x, c.y, 1, Math.sin(t * 4 + c.x * 0.05) * 4);
   }
+  for (const gd of world.goldens) {
+    if (!gd.taken) drawGoldenCorn(ctx, gd.x, gd.y, 1, t);
+  }
   for (const ob of world.obstacles) {
     if (ob.kind === 'fence') {
       drawJumpFence(ctx, ob.x, groundY, 1);
+    } else if (ob.kind === 'pumpkin') {
+      drawRollingPumpkin(ctx, ob.x, groundY, ob.roll);
     } else if (ob.kind === 'oven') {
       drawOven(ctx, ob.x, groundY, 1, t, 0.7);
     } else if (ob.kind === 'haystack') {
