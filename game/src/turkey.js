@@ -2,6 +2,8 @@
 // One job: the turkey's movement (run, jump, slide, hide, dash), its state
 // (lives, invulnerability, hidden), and drawing the bird itself.
 
+import { WORLD } from './world.js';
+
 export const TURKEY_X = 300;
 export const TURKEY_W = 64;
 export const TURKEY_H = 58;
@@ -22,6 +24,7 @@ export function createTurkey() {
     dashTimer: 0,
     dashCooldown: 0,
     dashFlash: 0,
+    goldenTimer: 0,
     invulnerableUntil: 0,
     runPhase: 0,
     squash: 0,
@@ -90,6 +93,7 @@ export function updateTurkey(turkey, dt, input, now, groundY) {
   if (turkey.dashCooldown > 0) turkey.dashCooldown -= dt;
   if (turkey.dashTimer > 0) turkey.dashTimer -= dt;
   if (turkey.dashFlash > 0) turkey.dashFlash -= dt;
+  if (turkey.goldenTimer > 0) turkey.goldenTimer = Math.max(0, turkey.goldenTimer - dt);
   if (turkey.hidden) turkey.hideTimer += dt;
 
   // Left / right shuffle: the turkey can drift a little to line up a jump.
@@ -125,6 +129,23 @@ export function drawTurkey(ctx, turkey, time, groundY, blink) {
   ctx.save();
   ctx.translate(x, feetY - bob);
   ctx.scale(squashX, squashY);
+
+  if (turkey.goldenTimer > 0) {
+    // Golden Rush aura: a warm glowing ring around Tilly while she is
+    // invincible, pulsing with the time she has left.
+    const pulse = 0.45 + Math.sin(time * 8) * 0.2;
+    ctx.globalAlpha = pulse;
+    ctx.strokeStyle = '#ffd23e';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(0, -36, 52 + Math.sin(time * 6) * 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 210, 62, 0.16)';
+    ctx.beginPath();
+    ctx.arc(0, -36, 52 + Math.sin(time * 6) * 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
 
   if (turkey.hidden) {
     // Hidden: only a nervous eye and a tail feather poke out of the hay.
@@ -257,10 +278,16 @@ export function drawTurkey(ctx, turkey, time, groundY, blink) {
 
 export function turkeyBounds(turkey) {
   // A forgiving hitbox: a little smaller than the drawing, so near misses feel fair.
+  // Screen coordinates: her feet sit at groundY - turkey.y, so the box runs from
+  // just above her head down to her feet. Round 2 shipped this in turkey-local
+  // coordinates (y = height above the ground, 0..163), which never overlapped any
+  // obstacle or corn box (all screen coordinates, y 446..600) — the whole
+  // dodge-and-collect loop was dead: nothing could ever hit her and no corn
+  // could ever be collected. Fixed for round 3.
   const height = turkey.sliding ? 34 : TURKEY_H;
   return {
     x: turkey.x - 24,
-    y: turkey.y + (TURKEY_H - height),
+    y: WORLD.groundY - turkey.y - height,
     w: 48,
     h: height,
   };
