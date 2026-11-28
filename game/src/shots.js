@@ -41,11 +41,13 @@ export function stageShot(game, kind) {
     farmer.spottedFlash = 0.6;
     farmer.walkPhase = 3.4;
     // A busy, readable mid-run moment: fence to jump, oven glowing, a knife
-    // about to fall, corn to grab, a haystack to hide behind.
+    // about to fall, corn to grab, a haystack to hide behind — plus the new
+    // round-3 toys: a golden corn and a rolling pumpkin.
     world.obstacles = [
       { kind: 'fence', x: 640, w: 90, h: 58 },
       { kind: 'oven', x: 900, w: 140, h: 118 },
       { kind: 'knife', x: 1080, y: 60, vy: 0, state: 'falling', warned: 0.3 },
+      { kind: 'pumpkin', x: 1210, w: 70, h: 62, vx: 130, roll: 0.8 },
       { kind: 'haystack', x: 1130, w: 110, h: 84, used: false },
     ];
     world.corns = [
@@ -53,6 +55,9 @@ export function stageShot(game, kind) {
       { x: 606, y: 440, taken: false },
       { x: 652, y: 440, taken: false },
       { x: 760, y: 480, taken: false },
+    ];
+    world.goldens = [
+      { x: 820, y: 500, taken: false },
     ];
     world.spawnTimer = 2;
     return true;
