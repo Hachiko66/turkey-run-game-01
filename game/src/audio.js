@@ -105,6 +105,15 @@ export function playPickup(audio) {
   tone(audio, 1320, 0.12, 'triangle', 0.14, 0.07, 1760);
 }
 
+export function playGolden(audio) {
+  // Golden Rush fanfare: a bright rising arpeggio with a shimmer on top.
+  if (!ensureAudioContext(audio)) return;
+  const notes = [784, 988, 1175, 1568];
+  notes.forEach((n, i) => tone(audio, n, 0.16, 'triangle', 0.2, i * 0.07));
+  tone(audio, 2093, 0.35, 'sine', 0.1, 0.28, 1568);
+  tone(audio, 1568, 0.3, 'triangle', 0.12, 0.28);
+}
+
 export function playHide(audio) {
   if (!ensureAudioContext(audio)) return;
   noiseBurst(audio, 0.3, 0.14, 700);
@@ -124,6 +133,21 @@ export function playHit(audio) {
   if (!ensureAudioContext(audio)) return;
   noiseBurst(audio, 0.25, 0.3, 500);
   tone(audio, 180, 0.3, 'sawtooth', 0.2, 0, 60);
+}
+
+export function playShieldBlock(audio) {
+  // Golden Rush block: a bright metallic clink — the hit bounced off.
+  if (!ensureAudioContext(audio)) return;
+  tone(audio, 1568, 0.1, 'triangle', 0.18, 0, 2093);
+  tone(audio, 2093, 0.14, 'sine', 0.12, 0.05);
+  noiseBurst(audio, 0.06, 0.1, 5000);
+}
+
+export function playStageChime(audio) {
+  // A new stage opens: two warm bell notes that say "faster now".
+  if (!ensureAudioContext(audio)) return;
+  tone(audio, 659, 0.22, 'triangle', 0.18, 0, 880);
+  tone(audio, 880, 0.3, 'triangle', 0.16, 0.16, 1175);
 }
 
 export function playCaught(audio) {
