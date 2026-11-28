@@ -198,6 +198,46 @@ export function drawForestGate(ctx, x, groundY, scale, time) {
   ctx.restore();
 }
 
+export function drawRollingPumpkin(ctx, x, groundY, roll) {
+  // A pumpkin rolling along the ground toward the turkey: it spins as it
+  // rolls, so the player reads the motion and knows to jump it. Drawn as a
+  // jack-o'-lantern with a grinning face that spins with the roll angle.
+  ctx.save();
+  ctx.translate(x, groundY - 28);
+  ctx.rotate(roll);
+  ctx.fillStyle = '#e8702a';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 32, 26, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#d2691e';
+  ctx.beginPath();
+  ctx.ellipse(-13, 0, 13, 26, 0, 0, Math.PI * 2);
+  ctx.ellipse(13, 0, 13, 26, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Grinning face, carved on the rolling side.
+  ctx.fillStyle = '#1d1d1d';
+  ctx.beginPath();
+  ctx.moveTo(-14, -8);
+  ctx.lineTo(-8, 0);
+  ctx.lineTo(-2, -8);
+  ctx.closePath();
+  ctx.moveTo(4, -8);
+  ctx.lineTo(10, 0);
+  ctx.lineTo(16, -8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-12, 8);
+  ctx.quadraticCurveTo(0, 16, 12, 8);
+  ctx.lineTo(9, 12);
+  ctx.quadraticCurveTo(0, 19, -9, 12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#2f7a2e';
+  ctx.fillRect(-3, -34, 6, 12);
+  ctx.restore();
+}
+
 export function drawPumpkin(ctx, x, groundY, scale) {
   ctx.save();
   ctx.translate(x, groundY);
@@ -417,6 +457,54 @@ export function drawHaystack(ctx, x, groundY, scale) {
   ctx.moveTo(44, -108);
   ctx.lineTo(52, -98);
   ctx.stroke();
+  ctx.restore();
+}
+
+export function drawGoldenCorn(ctx, x, y, scale, time) {
+  // A golden corn cob: the Golden Rush pickup. Bigger and brighter than a
+  // normal cob, with a pulsing halo and sparkles so the player spots it
+  // from across the screen.
+  ctx.save();
+  ctx.translate(x, y + Math.sin(time * 3 + x * 0.02) * 5);
+  ctx.scale(scale, scale);
+  const pulse = 0.55 + Math.sin(time * 5) * 0.25;
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = '#ffd23e';
+  ctx.beginPath();
+  ctx.arc(0, 0, 34, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  // Sparkle rays around the halo.
+  ctx.strokeStyle = '#fff3c4';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + time * 0.8;
+    const r0 = 30 + Math.sin(time * 4 + i) * 3;
+    const r1 = r0 + 10;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
+    ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+    ctx.stroke();
+  }
+  // The cob itself: gold, with bright kernels and green husk leaves.
+  ctx.fillStyle = '#2f7a2e';
+  ctx.beginPath();
+  ctx.ellipse(-9, 13, 8, 18, 0.5, 0, Math.PI * 2);
+  ctx.ellipse(11, 13, 8, 18, -0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffb52e';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 15, 25, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffe27a';
+  for (let row = -2; row <= 2; row++) {
+    for (let col = -1; col <= 1; col++) {
+      ctx.beginPath();
+      ctx.arc(col * 8, row * 9, 2.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
   ctx.restore();
 }
 
