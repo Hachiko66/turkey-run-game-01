@@ -215,7 +215,7 @@ export function drawTitleScreen(ctx, game, time) {
   // Controls, plain and readable.
   ctx.fillStyle = 'rgba(74, 44, 20, 0.9)';
   ctx.beginPath();
-  ctx.roundRect(250, 326, 780, 132, 14);
+  ctx.roundRect(250, 326, 780, 156, 14);
   ctx.fill();
   ctx.fillStyle = '#fff3d6';
   ctx.font = 'bold 19px "Trebuchet MS", sans-serif';
@@ -225,7 +225,8 @@ export function drawTitleScreen(ctx, game, time) {
   ctx.fillText('← → — shuffle        P — pause        M — mute        Grab corn, dodge the oven & knives!', width / 2, 408);
   ctx.fillStyle = '#ffd23e';
   ctx.font = 'bold 17px "Trebuchet MS", sans-serif';
-  ctx.fillText('Reach the forest gate at 1200 m to escape. If Farmer Bram closes in — RUN!', width / 2, 436);
+  ctx.fillText('🌽 Golden corn = 6s Golden Rush: invincible, double score, corn magnet!', width / 2, 436);
+  ctx.fillText('🎃 Pumpkins roll at you — jump them! Reach the forest gate at 1200 m to escape.', width / 2, 462);
 
   drawButton(ctx, BUTTONS.start, '▶  START THE ESCAPE', game.hoverButton === 'start', true);
   drawButton(ctx, BUTTONS.howto, 'How to play (keys above)', game.hoverButton === 'howto', false);
@@ -345,5 +346,66 @@ export function drawHiddenBadge(ctx, game) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('🤫 HIDDEN IN THE HAY', 640, 123);
+  ctx.restore();
+}
+
+export function drawGoldenBadge(ctx, game) {
+  // Golden Rush badge: how much invincible, double-score, magnet time is left.
+  const left = game.turkey.goldenTimer;
+  if (left <= 0) return;
+  ctx.save();
+  ctx.fillStyle = 'rgba(74, 44, 20, 0.85)';
+  ctx.beginPath();
+  ctx.roundRect(494, 640, 292, 56, 12);
+  ctx.fill();
+  ctx.strokeStyle = '#ffd23e';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = '#ffd23e';
+  ctx.font = 'bold 15px "Trebuchet MS", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`🌽 GOLDEN RUSH — ${left.toFixed(1)}s`, 640, 658);
+  ctx.fillStyle = 'rgba(255, 243, 214, 0.25)';
+  ctx.beginPath();
+  ctx.roundRect(514, 672, 252, 8, 4);
+  ctx.fill();
+  ctx.fillStyle = '#ffd23e';
+  ctx.beginPath();
+  ctx.roundRect(514, 672, 252 * Math.min(1, left / 6), 8, 4);
+  ctx.fill();
+  ctx.restore();
+}
+
+export function drawStageBanner(ctx, game) {
+  // A big stage card that sweeps in when the world changes: the transition
+  // the old instant palette swap never had.
+  const { world } = game;
+  if (!world.stageBanner || world.stageBannerTimer <= 0) return;
+  const t = world.stageBannerTimer;
+  const alpha = Math.min(1, t / 0.6) * Math.min(1, (2.4 - t) / 0.3 + 0.2);
+  const stageNames = ['FARMYARD', 'THE BARN', 'THE KITCHEN'];
+  const stageLines = [
+    'The escape begins — mind the fences!',
+    'Into the barn — pumpkins roll in!',
+    'The kitchen — knives fall in pairs!',
+  ];
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(74, 44, 20, 0.55)';
+  ctx.beginPath();
+  ctx.roundRect(340, 210, 600, 110, 16);
+  ctx.fill();
+  ctx.strokeStyle = '#ffd23e';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = '#ffd23e';
+  ctx.font = 'bold 44px "Trebuchet MS", sans-serif';
+  ctx.fillText(stageNames[world.stageIndex], 640, 248);
+  ctx.fillStyle = '#fff3d6';
+  ctx.font = '20px "Trebuchet MS", sans-serif';
+  ctx.fillText(stageLines[world.stageIndex], 640, 292);
   ctx.restore();
 }
