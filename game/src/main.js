@@ -5,10 +5,10 @@
 
 import { createTurkey, resetTurkey, turkeyJump, turkeySlide, turkeyDash, turkeyHide, turkeyUnhide, turkeyHurt, updateTurkey, drawTurkey, turkeyBounds } from './turkey.js';
 import { createFarmer, resetFarmer, updateFarmer, farmerStumblePenalty, farmerDashEscape, farmerCaught, farmerScreenX, drawFarmer, FARMER_STATES } from './farmer.js';
-import { createWorld, resetWorld, updateWorld, worldEscaped, nearestHaystack, obstaclesHitTurkey, collectCorn, drawWorldBackground, drawWorldObjects, WORLD, STAGES } from './world.js';
-import { createAudio, ensureAudioContext, setMuted, startMusic, stopMusic, playGobble, playJump, playDash, playPickup, playHide, playSpotted, playHit, playCaught, playEscapeFanfare } from './audio.js';
+import { createWorld, resetWorld, updateWorld, worldEscaped, nearestHaystack, obstaclesHitTurkey, collectCorn, collectGolden, magnetCorn, drawWorldBackground, drawWorldObjects, WORLD, STAGES } from './world.js';
+import { createAudio, ensureAudioContext, setMuted, startMusic, stopMusic, playGobble, playJump, playDash, playPickup, playGolden, playShieldBlock, playStageChime, playHide, playSpotted, playHit, playCaught, playEscapeFanfare } from './audio.js';
 import { createInput, attachInput, consumeFrameEdges, pointInRect } from './input.js';
-import { drawHud, drawDashCooldown, drawTitleScreen, drawEndScreen, drawPausedOverlay, drawSpottedBanner, drawHiddenBadge, BUTTONS, drawButton } from './hud.js';
+import { drawHud, drawDashCooldown, drawGoldenBadge, drawStageBanner, drawTitleScreen, drawEndScreen, drawPausedOverlay, drawSpottedBanner, drawHiddenBadge, BUTTONS, drawButton } from './hud.js';
 import { shotParam, stageShot } from './shots.js';
 
 const canvas = document.getElementById('game');
@@ -38,6 +38,7 @@ export function createGame() {
     state: 'title',
     time: 0,
     score: 0,
+    scoreFrac: 0,
     distance: 0,
     corn: 0,
     bestScore: loadBestScore(),
@@ -46,6 +47,7 @@ export function createGame() {
     frozen: false,
     hoverButton: null,
     lastSpottedState: null,
+    lastStageIndex: 0,
     blinkTimer: 0,
     blink: false,
     turkey: createTurkey(),
@@ -71,12 +73,14 @@ export function startRun(g) {
   resetFarmer(g.farmer);
   resetWorld(g.world);
   g.score = 0;
+  g.scoreFrac = 0;
   g.distance = 0;
   g.corn = 0;
   g.state = 'playing';
   g.paused = false;
   g.frozen = false;
   g.lastSpottedState = null;
+  g.lastStageIndex = 0;
   ensureAudioContext(g.audio);
   startMusic(g.audio);
   playGobble(g.audio);
@@ -102,6 +106,16 @@ function endRun(g, escaped) {
 
 function handleHit(g, obstacle) {
   const now = g.time;
+  if (g.turkey.goldenTimer > 0) {
+    // Golden Rush: the hit bounces off with a clink, no life lost. A short
+    // block cooldown keeps one long overlap from clinking every frame.
+    if (now < g.turkey.invulnerableUntil) return;
+    g.turkey.invulnerableUntil = now + 0.9;
+    g.world.shake = 0.25;
+    playShieldBlock(g.audio);
+    setStatus('Golden Rush blocks the hit — keep running!');
+    return;
+  }
   if (!turkeyHurt(g.turkey, now)) return;
   g.world.shake = 0.7;
   g.world.flash = 0.5;
@@ -158,14 +172,37 @@ function updatePlaying(g, dt) {
   }
   g.lastSpottedState = farmer.state;
 
-  // Distance is the score's backbone; corn is the bonus.
+  // A new stage opens with a banner and a chime instead of an instant palette swap.
+  if (world.stageIndex !== g.lastStageIndex) {
+    g.lastStageIndex = world.stageIndex;
+    world.stageBanner = STAGES[world.stageIndex].name;
+    world.stageBannerTimer = 2.4;
+    playStageChime(audio);
+  }
+
+  // Distance is the score's backbone; corn is the bonus. Golden Rush doubles it.
+  // The fractional part is banked separately: flooring per frame at 60fps
+  // rounded the ~0.5 points/frame down to zero, so distance never scored.
   g.distance = world.distance;
-  g.score += Math.floor(world.speed * dt * 0.12);
+  const golden = turkey.goldenTimer > 0;
+  g.scoreFrac += world.speed * dt * 0.12 * (golden ? 2 : 1);
+  const whole = Math.floor(g.scoreFrac);
+  g.score += whole;
+  g.scoreFrac -= whole;
   const bounds = turkeyBounds(turkey);
+  if (golden) magnetCorn(world, turkey, dt);
+  const gold = collectGolden(world, bounds);
+  if (gold > 0) {
+    turkey.goldenTimer = 6;
+    g.corn += gold * 5;
+    g.score += gold * 250;
+    playGolden(audio);
+    setStatus('GOLDEN RUSH! 6 seconds: invincible, double score, corn magnet!');
+  }
   const got = collectCorn(world, bounds);
   if (got > 0) {
     g.corn += got;
-    g.score += got * 50;
+    g.score += got * 50 * (golden ? 2 : 1);
     farmer.gap = Math.min(330, farmer.gap + got * 6);
     playPickup(audio);
   }
@@ -228,6 +265,8 @@ function render(g) {
       drawSpottedBanner(ctx, g);
       drawHiddenBadge(ctx, g);
       drawDashCooldown(ctx, g);
+      drawGoldenBadge(ctx, g);
+      drawStageBanner(ctx, g);
     }
   }
   if (g.state === 'caught') drawEndScreen(ctx, g, false, g.time);
