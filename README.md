@@ -30,8 +30,15 @@ Or serve `game/` with any static server and open `game/index.html`.
 - **Dodge the oven and the carving knife.** Ovens glow and burn, knives fall
   with a warning glint, fences must be jumped. Corn is worth grabbing: every
   cob buys a little breathing room.
+- **Golden corn, Golden Rush.** A rare golden cob appears every dozen seconds:
+  grab it for 6 seconds of invincibility, double score, and a magnet that
+  pulls nearby corn toward you. A hit while golden just bounces off.
+- **Rolling pumpkins and paired knives.** From the barn on, jack-o'-lanterns
+  roll at you faster than the world scrolls — jump them early. In the kitchen,
+  knives sometimes drop in staggered pairs.
 - **Three stages, one escape.** The farmyard, the barn, then the kitchen —
-  faster and meaner as you go. Reach the forest gate at 1200 m to escape.
+  faster and meaner as you go, each opening with a stage banner and a chime.
+  Reach the forest gate at 1200 m to escape.
 - **Complete:** title screen, gameplay with a HUD (score, distance, lives,
   corn, stage, farmer meter), caught / escaped end screens with stats, and
   restart. Synthesized WebAudio sounds and a harvest tune included.
